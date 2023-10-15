@@ -24,8 +24,8 @@ def _generate_email():
     first_name = names.get_first_name()
     last_name = names.get_last_name()
     if randint(0, 1) == 0:
-        return f'{first_name}.{last_name}{randint(0, 99)}@{MAIL_DOMAIN}'.lower()
-    return f'{first_name}{randint(0, 99)}@{MAIL_DOMAIN}'.lower()
+        return f'{first_name}.{last_name}{randint(0, 999)}@{MAIL_DOMAIN}'.lower()
+    return f'{first_name}.{last_name}{randint(0, 999)}@{MAIL_DOMAIN}'.lower()
 
 def _generate_password():
     """
@@ -110,7 +110,7 @@ def create_account():
     if not os.path.exists(HEKT_EXT_PATH):
         __get_latest_hektCaptcha_ext(HEKT_EXT_PATH)
     options = Options()
-    options.headless = os.environ.get("DEBUG", "0") == "0"
+    # options.headless = os.environ.get("DEBUG", "0") == "0"
     options.add_argument("--disable-logging")
     options.add_argument("--log-level=3")
     options.add_argument("--window-size=1440,1280")
@@ -138,7 +138,7 @@ def create_account():
     t0 = monotonic()
     while captcha_checkbox.get_attribute("aria-checked") == "false":
         sleep(0.1)
-        if monotonic() - t0 > 20:
+        if monotonic() - t0 > 200:
             raise Exception("Captcha not checked in time")
         
     driver.switch_to.default_content()
@@ -150,9 +150,11 @@ def create_account():
     link = _get_confirmation_link(email)
     
     driver.get(link)
-    
-    close_button = WebDriverWait(driver, 10).until(lambda driver: driver.find_element(By.XPATH, "//button[text()='Close']"))
-    close_button.click()
+    try:
+        close_button = WebDriverWait(driver, 10).until(lambda driver: driver.find_element(By.XPATH, "//button[text()='Close']"))
+        close_button.click()
+    except Exception:
+        pass
 
     email_input = WebDriverWait(driver, 10).until(lambda driver: driver.find_element(By.XPATH, "//input[@type='email']"))
     email_input.send_keys(email)
@@ -163,13 +165,29 @@ def create_account():
     sleep(0.5)
     submit_button = driver.find_element(By.XPATH, "//button[@type='submit']")
     submit_button.click()
+    sleep(3)
+
+    driver.get("https://elevenlabs.io/")
 
     account_button = WebDriverWait(driver, 10).until(lambda driver: driver.find_element(By.XPATH, "//button[@data-testid='user-menu-button']"))
     account_button.click()
 
     menu_items_container = WebDriverWait(driver, 10).until(lambda driver: driver.find_element(By.XPATH, "//div[starts-with(@id, 'headlessui-menu-items')]"))
-    id = "headlessui-menu-item-P0-" + str(int(menu_items_container.get_attribute("id").split("-")[-1]) + 1)
-    profile_button = menu_items_container.find_element(By.ID, id)
+    original_string=menu_items_container.get_attribute("id")
+    print(original_string)
+    # Define a regular expression pattern to match the desired pattern
+    pattern = r'headlessui-menu-items-:r([a-z]):'
+
+    # Define a function to replace the matched string with the modified one
+    def replace(match):
+        char = match.group(1)
+        next_char = chr(ord(char) + 1)  # Increase the character by 1
+        return f'headlessui-menu-item-:r{next_char}:'
+
+    # Use re.sub to replace the matched strings
+    id = re.sub(pattern, replace, original_string)
+    print(id)
+    profile_button = driver.find_element(By.ID, id)
     profile_button.click()
     
     api_key_input = WebDriverWait(driver, 10).until(lambda driver: driver.find_element(By.XPATH, "//input[@type='password']"))
@@ -182,3 +200,8 @@ def create_account():
     driver.quit()
 
     return email, password, api_key
+
+    # bf8543faa35d15a9c74da4819888c1e8
+    # f50b3ed9c65720599fcb2b0fa16a3adc
+    # 39fcf4c5a69691b916b8a9a580dc93c2
+    # 0484a3009fdf3f71a93d7d05d698de5a
